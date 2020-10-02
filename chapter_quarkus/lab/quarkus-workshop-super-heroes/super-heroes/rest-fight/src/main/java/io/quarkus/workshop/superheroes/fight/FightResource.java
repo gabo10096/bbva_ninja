@@ -36,15 +36,21 @@ public class FightResource {
     @Inject
     FightService service;
 
+@ConfigProperty(name = "process.milliseconds", defaultValue="0")
+long tooManyMilliseconds;
 
-
-
+private void veryLongProcess() throws InterruptedException {
+    Thread.sleep(tooManyMilliseconds);
+}
 
 @Operation(summary = "Returns two random fighters")
 @APIResponse(responseCode = "200", content = @Content(mediaType = APPLICATION_JSON, schema = @Schema(implementation = Fighters.class, required = true)))
+@Timeout(250)
+@CircuitBreaker(requestVolumeThreshold = 4, failureRatio = 0.75, delay = 5000)
 @GET
 @Path("/randomfighters")
 public Response getRandomFighters() throws InterruptedException {
+    veryLongProcess();
     Fighters fighters = service.findRandomFighters();
     LOGGER.debug("Get random fighters " + fighters);
     return Response.ok(fighters).build();

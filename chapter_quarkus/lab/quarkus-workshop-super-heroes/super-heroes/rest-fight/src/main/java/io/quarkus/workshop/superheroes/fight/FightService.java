@@ -1,7 +1,10 @@
 package io.quarkus.workshop.superheroes.fight;
 
 import io.quarkus.workshop.superheroes.fight.client.Hero;
+import io.quarkus.workshop.superheroes.fight.client.HeroService;
 import io.quarkus.workshop.superheroes.fight.client.Villain;
+import io.quarkus.workshop.superheroes.fight.client.VillainService;
+
 import org.jboss.logging.Logger;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -10,12 +13,9 @@ import javax.transaction.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Random;
-import io.quarkus.workshop.superheroes.fight.client.HeroService;
-import io.quarkus.workshop.superheroes.fight.client.VillainService;
+
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
-
-
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import static javax.transaction.Transactional.TxType.REQUIRED;
 import static javax.transaction.Transactional.TxType.SUPPORTS;
@@ -28,6 +28,13 @@ public class FightService {
 
     private final Random random = new Random();
 
+    @Inject
+    @RestClient
+    HeroService heroService;
+
+    @Inject
+    @RestClient
+    VillainService villainService;
 
 
     public List<Fight> findAllFights() {
@@ -88,18 +95,48 @@ public class FightService {
         return fight;
     }
 
-
-
-
-
 Fighters findRandomFighters() {
-   return null;
+    Hero hero = findRandomHero();
+    Villain villain = findRandomVillain();
+    Fighters fighters = new Fighters();
+    fighters.hero = hero;
+    fighters.villain = villain;
+    return fighters;
+}
+
+@Retry(maxRetries = 3, delay = 2000)
+@Fallback(fallbackMethod = "fallbackRandomHero")
+Hero findRandomHero() {
+LOGGER.warn("findRandomHero execution");
+return heroService.findRandomHero();
+}
+
+@Retry(maxRetries = 3, delay = 2000)
+@Fallback(fallbackMethod = "fallbackRandomVillain")
+Villain findRandomVillain() {
+LOGGER.warn("findRandomVillain execution");
+return villainService.findRandomVillain();
+}
+
+public Hero fallbackRandomHero() {
+    LOGGER.warn("Falling back on Hero");
+    Hero hero = new Hero();
+    hero.name = "Fallback hero";
+    hero.picture = "https://dummyimage.com/280x380/1e8fff/ffffff&text=Fallback+Hero";
+    hero.powers = "Fallback hero powers";
+    hero.level = 1;
+    return hero;
+}
+
+public Villain fallbackRandomVillain() {
+    LOGGER.warn("Falling back on Villain");
+    Villain villain = new Villain();
+    villain.name = "Fallback villain";
+    villain.picture = "https://dummyimage.com/280x380/b22222/ffffff&text=Fallback+Villain";
+    villain.powers = "Fallback villain powers";
+    villain.level = 42;
+    return villain;
 }
 
 
-
-
-
-
 }
-
